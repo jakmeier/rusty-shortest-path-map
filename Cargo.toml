@@ -1,0 +1,9 @@
+[package]
+name = "JKM Shortest Path Map Library"
+version = "0.1.0"
+authors = ["Jakob Meier <jakobmeier@bluewin.ch>"]
+
+[lib]
+name = "jkm_shortest_path_map"
+
+[dependencies]
