@@ -1,5 +1,6 @@
 //! Holds unit-style tests as well as module invariants that can be called from the integration test module
-
+use std::fs::File;
+use std::io::prelude::*;
 
 use super::*;
 
@@ -18,6 +19,28 @@ pub fn check_module_invariants (testee: &JkmShortestPathMap) {
 	// Call in assertion with ||
 pub fn print_graph (testee: &JkmShortestPathMap) -> bool {
 	
+	if let Ok(mut f) = File::create("log.jkmmap") {
+	
+		//nodes
+		for i in 0..testee.graph.len() {
+			let mut node_string = format!("{}|{}|{}|{}|{}|{}|{}|{}", 
+			testee.graph[i].x, testee.graph[i].y,
+			if let Some(n) = testee.graph[i].neighbours[0] {n.to_string()} else {"-".to_string()},
+			if let Some(n) = testee.graph[i].neighbours[1] {n.to_string()} else {"-".to_string()},
+			if let Some(n) = testee.graph[i].neighbours[2] {n.to_string()} else {"-".to_string()},
+			if let Some(n) = testee.graph[i].neighbours[3] {n.to_string()} else {"-".to_string()},
+			if let Some(sp) = testee.graph[i].shortest_path  {sp.to_string()} else {"-".to_string()},
+			testee.graph[i].cost
+			);
+			f.write_all((node_string + "\n").as_bytes());
+		}
+		//obstacles
+		f.write_all("#\n".as_bytes());
+		for &(x,y,w,h) in testee.obstacles.iter() {
+			f.write_all( (format!("{}|{}|{}|{}", x,y,w,h) + "\n").as_bytes() );
+		}
+		
+	}
 	println!("\nJkmShortestPathMap's graph looks like this: \n");
 	
 	for i in 0..testee.graph.len() {
@@ -29,7 +52,7 @@ pub fn print_graph (testee: &JkmShortestPathMap) -> bool {
 		if let Some(n) = testee.graph[i].neighbours[3] {n.to_string()} else {"-".to_string()},
 		if let Some(sp) = testee.graph[i].shortest_path  {sp.to_string()} else {"-".to_string()},
 		testee.graph[i].cost
-		)
+		);
 	}
 	println!(" ");
 	false
@@ -39,32 +62,33 @@ pub fn print_graph (testee: &JkmShortestPathMap) -> bool {
 fn inv_neighbours_are_symmetric(testee: &JkmShortestPathMap) {
 	for (i, node) in testee.graph.iter().enumerate() {
 		if let Some(neighbour) = node.neighbours[NORTH] {
-			assert!(testee.graph[neighbour].neighbours[SOUTH] == Some(i)|| print_graph(testee) );
+			assert!(testee.graph[neighbour].neighbours[SOUTH] == Some(i)|| print_graph(testee), "\nNode #{} has a neighbour in the north, Node #{}, but the neighbourhood is not returned.\n", i, neighbour );
 		}
 		if let Some(neighbour) = node.neighbours[EAST] {
-			assert!(testee.graph[neighbour].neighbours[WEST] == Some(i)|| print_graph(testee) );
+			assert!(testee.graph[neighbour].neighbours[WEST] == Some(i)|| print_graph(testee), "\nNode #{} has a neighbour in the east, Node #{}, but the neighbourhood is not returned.\n", i, neighbour  );
 		}
 		if let Some(neighbour) = node.neighbours[SOUTH] {
-			assert!(testee.graph[neighbour].neighbours[NORTH] == Some(i)|| print_graph(testee) );
+			assert!(testee.graph[neighbour].neighbours[NORTH] == Some(i)|| print_graph(testee), "\nNode #{} has a neighbour in the south, Node #{}, but the neighbourhood is not returned.\n", i, neighbour  );
 		}
 		if let Some(neighbour) =node.neighbours[WEST] {
-			assert!(testee.graph[neighbour].neighbours[EAST] == Some(i) || print_graph(testee) );
+			assert!(testee.graph[neighbour].neighbours[EAST] == Some(i) || print_graph(testee), "\nNode #{} has a neighbour in the west, Node #{}, but the neighbourhood is not returned.\n", i, neighbour  );
 		}
 	}
 }
 
 fn inv_all_shortest_paths_lead_to_destination(testee: &JkmShortestPathMap) {
 	for i in 0..testee.graph.len() {
-		assert!(shortest_path_leads_to_index(testee, i, testee.end_point_index)|| print_graph(testee) );
+		assert!(shortest_path_leads_to_index(testee, i, testee.end_point_index, testee.graph.len())|| print_graph(testee) );
 	}
 }
 
-fn shortest_path_leads_to_index(testee: &JkmShortestPathMap, start: usize, end: usize) -> bool {
+fn shortest_path_leads_to_index(testee: &JkmShortestPathMap, start: usize, end: usize, allowed_calls: usize) -> bool {
 	if start == end { true }
+	else if allowed_calls == 0 {  println!("No way to get from Node #{} to Node #{}.", start, end); false }
 	else { 
 		if let Some(sp) = testee.graph[start].shortest_path {
 			if let Some(next) =  testee.graph[start].neighbours[sp] {
-				shortest_path_leads_to_index(testee, next, end)
+				shortest_path_leads_to_index(testee, next, end, allowed_calls-1)
 			}
 			else { panic!("There was a shortest path marked from node {} in direction {} but there was no neighbour in this direction!\n", start, sp); }
 		}
@@ -78,7 +102,7 @@ fn simple_creation_test() {
 	let end = (100.0, 100.0);
 	let map = (0.0,0.0,200.0,100.0);
 	let spm = JkmShortestPathMap::new(start, end, map);
-	assert!(spm.graph.len() == 2 || print_graph(&spm));
+	assert!(spm.graph.len() == 6 || print_graph(&spm));
 	let should_be_end = spm.graph[spm.start_point_index].neighbours[SOUTH].unwrap();
 	assert!(should_be_end == spm.end_point_index || print_graph(&spm));
 	assert!(spm.graph[spm.end_point_index].cost == 0.0 || print_graph(&spm));
@@ -97,7 +121,7 @@ fn general_test_creation(start_x: f64, start_y: f64, end_x: f64, end_y: f64, map
 	let end = (end_x, end_y);
 	let total_cost = (start_y - end_y).abs() + (start_x - end_x).abs();
 	let spm = JkmShortestPathMap::new(start, end, map);
-	assert!(spm.graph.len() == 4 || print_graph(&spm));
+	assert!(spm.graph.len() == 16 || print_graph(&spm));
 	assert!(spm.graph[spm.end_point_index].cost == 0.0 || print_graph(&spm));
 	assert!(spm.graph[spm.start_point_index].cost == total_cost || print_graph(&spm) , "Invalid cost: {}", spm.graph[spm.start_point_index].cost);
 	
@@ -154,7 +178,6 @@ fn split_edge_test_h() {
 	let map = (0.0,0.0,100.0,200.0);
 	let mut spm0 = JkmShortestPathMap::new(start, end, map);
 	let mut spm1 = JkmShortestPathMap::new(start, end, map);
-	print_graph(&spm0);
 	let var = spm0.start_point_index;
 	assert_eq! (var, spm1.start_point_index);
 	

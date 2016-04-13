@@ -12,21 +12,28 @@ fn usual_use_case_one() {
 	let  mut spm = JkmShortestPathMap::new(start, end, map);
 
 	check_module_invariants(&spm);
+	assert!(spm.graph.len() == 6 || print_graph(&spm));
 	
 	let array_of_obstucles = [
 		(80.0,20.0,40.0, 20.0),
-		(140.0, 40.0, 60.0, 110.0),
+		(140.0, 40.0, 50.0, 110.0),
 		(50.0, 170.0, 20.0, 80.0),
 		(150.0, 170.0, 10.0, 10.0),
 		(150.0, 200.0, 10.0, 40.0),
 		
-		(20.0,250.0,230.0,20.0),
 	];
 	
 	for &(x,y,w,h) in array_of_obstucles.iter() {
 		spm.insert_obstacle(x,y,w,h);
 		check_module_invariants(&spm);
 	}
+	
+	assert!(spm.graph[spm.start_point_index].cost == 340.00 || print_graph(&spm));
+	
+	
+	spm.insert_obstacle(20.0,250.1,230.0,20.0);
+	check_module_invariants(&spm);
+	assert!(spm.graph[spm.start_point_index].cost == 500.00 || print_graph(&spm));
 	
 }
 
