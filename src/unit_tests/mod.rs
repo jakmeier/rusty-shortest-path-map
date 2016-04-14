@@ -14,33 +14,14 @@ mod tests;
 pub fn check_module_invariants (testee: &JkmShortestPathMap) {
 	inv_neighbours_are_symmetric(testee);
 	inv_all_shortest_paths_lead_to_destination(testee);	
+	inv_costs_are_correct(testee);
 }
 	
 	// Call in assertion with ||
 pub fn print_graph (testee: &JkmShortestPathMap) -> bool {
 	
-	if let Ok(mut f) = File::create("log.jkmmap") {
+	log_map(testee, "log".to_string());
 	
-		//nodes
-		for i in 0..testee.graph.len() {
-			let mut node_string = format!("{}|{}|{}|{}|{}|{}|{}|{}", 
-			testee.graph[i].x, testee.graph[i].y,
-			if let Some(n) = testee.graph[i].neighbours[0] {n.to_string()} else {"-".to_string()},
-			if let Some(n) = testee.graph[i].neighbours[1] {n.to_string()} else {"-".to_string()},
-			if let Some(n) = testee.graph[i].neighbours[2] {n.to_string()} else {"-".to_string()},
-			if let Some(n) = testee.graph[i].neighbours[3] {n.to_string()} else {"-".to_string()},
-			if let Some(sp) = testee.graph[i].shortest_path  {sp.to_string()} else {"-".to_string()},
-			testee.graph[i].cost
-			);
-			f.write_all((node_string + "\n").as_bytes());
-		}
-		//obstacles
-		f.write_all("#\n".as_bytes());
-		for &(x,y,w,h) in testee.obstacles.iter() {
-			f.write_all( (format!("{}|{}|{}|{}", x,y,w,h) + "\n").as_bytes() );
-		}
-		
-	}
 	println!("\nJkmShortestPathMap's graph looks like this: \n");
 	
 	for i in 0..testee.graph.len() {
@@ -56,6 +37,36 @@ pub fn print_graph (testee: &JkmShortestPathMap) -> bool {
 	}
 	println!(" ");
 	false
+}
+
+pub fn log_map(testee: &JkmShortestPathMap, name: String ) {
+	if let Ok(mut f) = File::create(name + ".jkmmap") {
+		//nodes
+		for i in 0..testee.graph.len() {
+			let node_string = format!("{}|{}|{}|{}|{}|{}|{}|{}", 
+			testee.graph[i].x, testee.graph[i].y,
+			if let Some(n) = testee.graph[i].neighbours[0] {n.to_string()} else {"-".to_string()},
+			if let Some(n) = testee.graph[i].neighbours[1] {n.to_string()} else {"-".to_string()},
+			if let Some(n) = testee.graph[i].neighbours[2] {n.to_string()} else {"-".to_string()},
+			if let Some(n) = testee.graph[i].neighbours[3] {n.to_string()} else {"-".to_string()},
+			if let Some(sp) = testee.graph[i].shortest_path  {sp.to_string()} else {"-".to_string()},
+			testee.graph[i].cost
+			);
+			if let Err(e) = f.write_all((node_string + "\n").as_bytes()) {
+				println!("File write error: {}", e);
+			}
+		}
+		//obstacles
+		if let Err(e) = f.write_all("#\n".as_bytes()) {
+			println!("File write error: {}", e);
+		}
+		for &(x,y,w,h) in testee.obstacles.iter() {
+			if let Err(e) = f.write_all( (format!("{}|{}|{}|{}", x,y,w,h) + "\n").as_bytes() ) {
+				println!("File write error: {}", e);
+			}
+		}
+		
+	}
 }
 
 	
@@ -79,6 +90,17 @@ fn inv_neighbours_are_symmetric(testee: &JkmShortestPathMap) {
 fn inv_all_shortest_paths_lead_to_destination(testee: &JkmShortestPathMap) {
 	for i in 0..testee.graph.len() {
 		assert!(shortest_path_leads_to_index(testee, i, testee.end_point_index, testee.graph.len())|| print_graph(testee) );
+	}
+}
+
+fn inv_costs_are_correct(testee: &JkmShortestPathMap){
+	for i in 0..testee.graph.len() {
+		if let Some(sp) = testee.graph[i].shortest_path {
+			if let Some(neighbour) = testee.graph[i].neighbours[sp] {
+				let expected_cost = testee.graph[neighbour].cost + (testee.graph[i].x - testee.graph[neighbour].x).abs() + (testee.graph[i].y - testee.graph[neighbour].y).abs();
+				assert!( testee.graph[i].cost == expected_cost || print_graph(testee) );
+			}
+		}
 	}
 }
 

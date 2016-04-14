@@ -164,7 +164,7 @@ impl JkmShortestPathMap {
 		}
 		else {
 			//not directly connected => create obstacle that connects itself with the border of the map
-			let mut x; let mut y; let mut w; let mut h;
+			let x; let y; let w; let h;
 			if start.0 < end.0 {x = start.0; w = end.0-start.0;} else {x=end.0; w = start.0-end.0;}
 			if start.1 < end.1 {y = start.1; h = end.1-start.1;} else {y=end.1; h = start.1-end.1;}
 			obj.insert_obstacle(x,y,w,h);
@@ -183,111 +183,6 @@ impl JkmShortestPathMap {
 			
 		}
 		obj
-		
-		/*let mut g = Vec::new();
-		let mut s = Box::new(GraphNode::new(start.0, start.1));
-		let mut start_index = 1;
-		let mut e = Box::new(GraphNode::new(end.0, end.1));
-		e.cost = 0.0;
-		g.push(e);
-		
-		if start.0 == end.0 {
-			//vertically connected
-			if start.1 < end.1 {
-				s.cost = end.1 - start.1;
-				s.neighbours[SOUTH] = Some(0);
-				g[0].neighbours[NORTH] = Some(start_index);
-				s.shortest_path = Some(SOUTH);
-			}
-			else if end.1 < start.1 {
-				s.cost = start.1 - end.1;
-				s.neighbours[NORTH] = Some(0);
-				g[0].neighbours[SOUTH] = Some(start_index);
-				s.shortest_path = Some(NORTH);
-			}
-			else { panic!("Start and end point identical coordinates."); }
-			
-		}
-		else if start.1 == end.1 {
-			//horizontally connected
-			if start.0 < end.0 {
-				s.cost = end.0 - start.0;
-				s.neighbours[EAST] = Some(0);
-				g[0].neighbours[WEST] = Some(start_index);
-				s.shortest_path = Some(EAST);
-			}
-			else if end.0 < start.0 {
-				s.cost = start.0 - end.0;
-				s.neighbours[WEST] = Some(0);
-				g[0].neighbours[EAST] = Some(start_index);
-				s.shortest_path = Some(WEST);				
-			}
-			else { panic!("Start and end point identical coordinates."); }
-
-		}
-		else {
-			//not directly connected => create helper nodes
-			s.cost = (start.0 - end.0).abs() + (start.1 - end.1).abs();
-			let mut h = Box::new(GraphNode::new(end.0, start.1)); //on same x coordinate as end
-			let mut h1 = Box::new(GraphNode::new(start.0, end.1)); // on same y coordinate as end
-			h.cost = (start.0 - end.0).abs(); 
-			h1.cost = (start.1 - end.1).abs(); 
-			start_index += 2;
-			
-			//connect helper nodes horizontally
-			if start.0 < end.0 {
-				h.neighbours[EAST] = Some(0);
-				g[0].neighbours[WEST] = Some(1);
-				h.shortest_path = Some(EAST);
-				
-				h1.neighbours[WEST] = Some(start_index);
-				s.neighbours[EAST] = Some(2);
-				s.shortest_path = Some(EAST);
-			}
-			else {
-				h.neighbours[WEST] = Some(0);
-				g[0].neighbours[EAST] = Some(1);
-				h.shortest_path = Some(WEST);
-				
-				h1.neighbours[EAST] = Some(start_index);
-				s.neighbours[WEST] = Some(2);
-				s.shortest_path = Some(WEST);
-			}
-			
-			//connect helper nodes vertically
-			if start.1 < end.1 {
-				h.neighbours[NORTH] = Some(start_index);
-				s.neighbours[SOUTH] = Some(1);
-				s.shortest_path = Some(SOUTH);
-				
-				h1.neighbours[SOUTH] = Some(0);
-				g[0].neighbours[NORTH] = Some(2);
-				h1.shortest_path = Some(SOUTH);
-			}
-			else {
-				h.neighbours[SOUTH] = Some(start_index);
-				s.neighbours[NORTH] = Some(1);
-				s.shortest_path = Some(NORTH);
-				
-				h1.neighbours[NORTH] = Some(0);
-				g[0].neighbours[SOUTH] = Some(2);
-				h1.shortest_path = Some(NORTH);
-			}
-			g.push(h);
-			g.push(h1);
-		} 
-		
-		g.push(s);
-		
-		
-		
-		JkmShortestPathMap {
-			graph: g,
-			obstacles: Vec::new(),
-			end_point_index: 0,
-			start_point_index: start_index, 
-			map: map, 
-		}*/
 	}
 	
 	///
@@ -314,7 +209,8 @@ impl JkmShortestPathMap {
 				}
 			}
 		}
-		// Remove all blocked edges, invalidate paths going through these edges
+		// Remove all blocked edges 
+		//invalidate paths going through these edges
 		for blocked_edge in h_blocked.iter() {
 			let (left, right) = blocked_edge.0;
 			self.graph[left].delete_neighbour(right);
@@ -322,13 +218,14 @@ impl JkmShortestPathMap {
 			if self.graph[left].shortest_path == Some(EAST) {
 				self.invalidate_paths_through_node(left);
 				self.graph[left].shortest_path = None;
+				self.graph[left].cost = std::f64::INFINITY;
 			}
 			if self.graph[right].shortest_path == Some(WEST) {
 					self.invalidate_paths_through_node(right);
 					self.graph[right].shortest_path = None;
+					self.graph[right].cost = std::f64::INFINITY;
 			}
 		}
-		
 		for blocked_edge in v_blocked.iter() {
 			let (bot, top) = blocked_edge.0;
 			self.graph[bot].delete_neighbour(top);
@@ -336,18 +233,20 @@ impl JkmShortestPathMap {
 			if self.graph[bot].shortest_path == Some(NORTH) {
 				self.invalidate_paths_through_node(bot);
 				self.graph[bot].shortest_path = None;
+				self.graph[bot].cost = std::f64::INFINITY;
 			}
 			if self.graph[top].shortest_path == Some(SOUTH) {
 				self.invalidate_paths_through_node(top);
 				self.graph[top].shortest_path = None;
+				self.graph[top].cost = std::f64::INFINITY;
 			}
 		}
 		
 		
 		// Create new vertices and connect them in a circle
 		// While doing so, also make a connection to the rest of the graph:
-			// From each edge-node  
-			//For the corners search in both open directions the closest edge that could be crossed,
+			// From each edge-node to the node from which an edge was deleted
+			// For the corners, search in both open directions the closest edge that could be crossed,
 			// create a new node there and connect to this.
 		let mut lu = Box::new(GraphNode::new(x,y));
 		let mut ru = Box::new(GraphNode::new(x+w,y));
@@ -375,7 +274,10 @@ impl JkmShortestPathMap {
 		self.graph.push(lu); //i
 		
 		
-		// add upper line and connect it as described above, then refresh shortest path on both nodes
+		// Add upper line and connect it as described above, 
+		// then refresh shortest path on both nodes to a temporary value.
+		// The value need to be refreshed again afterwards, but to where the updateing should be initiatet
+		// we need these values
 		let mut v_blocked_buf = Vec::new(); // use to buffer reversed order
 		for j in 0..v {
 			if let Some(edge) = v_blocked.pop() {
@@ -485,7 +387,7 @@ impl JkmShortestPathMap {
 		self.link_to_south(i + 2 * v + ho + 3); 
 		self.link_to_west(i + 2 * v + ho + 3); 
 		
-		// Search the node closest to the end point, then inititate recomputation starting fro this node
+		// Search the node closest to the end point, then inititate recomputation starting from this node
 		let mut closest_node = (None, std::f64::INFINITY);
 		for j in i..self.graph.len() {
 			if self.graph[j].cost < closest_node.1 {
@@ -494,17 +396,34 @@ impl JkmShortestPathMap {
 		}
 		if let (Some(closest),_) = closest_node {
 			//self.update_node(closest);
-			self.update_neighbours(closest);
-		}
+			//self.update_neighbours(closest); //This alone does not work, since it will not always update all nodes
+			for k in 0..(2*v + 2*ho + 4) {
+				let mut to_update = if k%2 == 0 {closest + ((k+1)/2)} else {closest - ((k+1)/2)};
+				loop {
+					to_update = if to_update >= (i + 2 * v + 2 * ho + 4) { to_update-(2 * v + 2 * ho + 4) }
+									else if to_update < i { to_update + (2 * v + 2 * ho + 4) }
+									else {break};
+				}
+				debug_assert!(to_update <(i+ 2 * v + 2 * ho + 4) && to_update >= i, "Boundry violated: to_update: {}, i:{}, v:{}, ho:{}", to_update, i, v, ho);
+				self.update_node(to_update);
+				self.update_neighbours(to_update);
+			}
+			// Update new connection nodes
+			for k in  (2*v + 2*ho + 4)..self.graph.len() {
+				self.update_node(k);
+				self.update_neighbours(k);
+			}
+			
+		}//else: not connected at all => no update possible
 		
 		// At this point, the graph should be consistent again
 	}
 	
-	fn invalidate_paths_through_node (&mut self, n: usize) {
-		for j in 0..4 {
-			if let Some(i) = self.graph[n].neighbours[j] {
-				if let Some(s) = self.graph[i].shortest_path {
-					if self.graph[i].neighbours[s] == Some(n) {
+	fn invalidate_paths_through_node (&mut self, n: usize) {	
+		for direction in 0..4 {
+			if let Some(i) = self.graph[n].neighbours[direction] {
+				if let Some(sp_of_neighbour) = self.graph[i].shortest_path {
+					if self.graph[i].neighbours[sp_of_neighbour] == Some(n) {
 						self.graph[i].shortest_path = None;
 						self.graph[i].cost = std::f64::INFINITY;
 						self.invalidate_paths_through_node (i);
@@ -560,7 +479,7 @@ impl JkmShortestPathMap {
 	fn connect_v(&mut self, top: usize, bot: usize) {
 		debug_assert!(self.graph[top].y < self.graph[bot].y && self.graph[top].x == self.graph[bot].x, "The top node is actually not higher than the bottom one or they are not alligned.");
 		if self.v_line_crosses_no_obstacle(self.graph[top].x, self.graph[top].y, self.graph[bot].y) {
-			let cost = self.graph[bot].x - self.graph[top].x;
+			let cost = self.graph[bot].y - self.graph[top].y;
 			self.graph[top].neighbours[SOUTH] = Some(bot);
 			self.graph[bot].neighbours[NORTH] = Some(top);
 			
@@ -596,11 +515,11 @@ impl JkmShortestPathMap {
 	/// This function can be (and is) called while the node has connection to neighbours that have not been added to the graph yet
 	fn update_node (&mut self, n: usize) {
 		if n == self.end_point_index {return;}
-		let mut result = (None, std::f64::INFINITY);
+		let mut result = (None, std::f64::INFINITY); // Old value does not need to be considered, if this way is still available we will find it anyway
 		let graph_size = self.graph.len();
 		for i in 0..4 {
 			if let Some(neighbour) = self.graph[n].neighbours[i] {
-				if neighbour < graph_size 
+				if neighbour < graph_size // check whether the node exists
 				{
 					let cost = self.graph[neighbour].cost + self.distance_on_map(n, neighbour);
 					if cost < result.1 { result = (Some(i), cost); }
@@ -616,7 +535,10 @@ impl JkmShortestPathMap {
 		(self.graph[n0].x - self.graph[n1].x).abs() + (self.graph[n0].y - self.graph[n1].y).abs() 
 	}
 	
-	// Take an edge and insert a new node on it. No new edges are inserted in this function.
+	// Take an edge and insert a new node on it. 
+	// The coordinate has to be given absolute, not relative to the node n 
+	// and can be an x- or y-coordinate, depending on the direction.
+	// No new edges are inserted in this function except fot the two who replace the one to split up.
 	fn split_edge(&mut self, n: usize, direction: usize, coordinate: f64) -> usize {
 		debug_assert!(self.graph[n].neighbours[direction].is_some());
 		debug_assert!(
@@ -647,6 +569,10 @@ impl JkmShortestPathMap {
 	
 	// These 4 functions take a node and search the next edge in one direction
 	// Then they connect to this edge which usually involves creating a new node
+	// If the linking was successful and a new node was created, 
+	// it will link the new node again in the same direction and so on, 
+	// until it cannot link again or it can do so without creating a new node
+	// Note: This could be done more efficiently without recursion and a binary heap
 	fn link_to_north(&mut self, n: usize ) {
 		debug_assert!(self.graph[n].neighbours[NORTH] == None);
 		// We only have to see for right neighbours, otherwise we would look at each edge twice
@@ -674,6 +600,7 @@ impl JkmShortestPathMap {
 			else {
 				let new_index = self.split_edge(left, EAST, x);
 				self.connect_v(new_index, n);
+				self.link_to_north(new_index);
 			}
 			
 		}
@@ -703,6 +630,7 @@ impl JkmShortestPathMap {
 			else {
 				let new_index = self.split_edge(top, SOUTH, y);
 				self.connect_h(n, new_index);
+				self.link_to_east(new_index);
 			}
 			
 		}
@@ -732,6 +660,7 @@ impl JkmShortestPathMap {
 			else {
 				let new_index = self.split_edge(left, EAST, x);
 				self.connect_v(n, new_index);
+				self.link_to_south(new_index);
 			}
 			
 		}
@@ -761,6 +690,7 @@ impl JkmShortestPathMap {
 			else {
 				let new_index = self.split_edge(top, SOUTH, y);
 				self.connect_h(new_index, n);
+				self.link_to_west(new_index);
 			}
 			
 		}
@@ -820,8 +750,8 @@ impl Ord for MinSortableEdge {
 			panic!("Can't compare NaN here.");
 		}
 		else { //flipped order to get a min_heap instead
-			if other.1 < self.1 { Ordering::Greater }
-			else if other.1 > self.1 { Ordering::Less }
+			if other.1 > self.1 { Ordering::Greater }
+			else if other.1 < self.1 { Ordering::Less }
 			else { Ordering::Equal }
 		}
 	}

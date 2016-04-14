@@ -23,17 +23,20 @@ fn usual_use_case_one() {
 		
 	];
 	
-	for &(x,y,w,h) in array_of_obstucles.iter() {
+	for (i, &(x,y,w,h)) in array_of_obstucles.iter().enumerate() {
 		spm.insert_obstacle(x,y,w,h);
+		let filename = "usual_use_case_one_log".to_string() + &i.to_string();
+		log_map(&spm, filename);
 		check_module_invariants(&spm);
 	}
 	
 	assert!(spm.graph[spm.start_point_index].cost == 340.00 || print_graph(&spm));
 	
 	
-	spm.insert_obstacle(20.0,250.1,230.0,20.0);
+	spm.insert_obstacle(20.0,265.0,230.0,20.0);
+	log_map(&spm, "usual_use_case_one_log_end".to_string());
 	check_module_invariants(&spm);
-	assert!(spm.graph[spm.start_point_index].cost == 500.00 || print_graph(&spm));
+	assert!(spm.graph[spm.start_point_index].cost == 460.00 || print_graph(&spm));
 	
 }
 
