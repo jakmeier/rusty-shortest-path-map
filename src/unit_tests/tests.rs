@@ -104,5 +104,3 @@ fn partial_overlapping_test() {
 	//	Invariant-styled:
 		// There is no shorter path in the graph
 		// There is no shorter path OUTSIDE of the nodes of the graph
-	// other
-		// next checkpoint

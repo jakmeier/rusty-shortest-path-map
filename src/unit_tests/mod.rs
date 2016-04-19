@@ -142,6 +142,14 @@ fn shortest_path_leads_to_index(testee: &JkmShortestPathMap, start: usize, end: 
 	}		
 }
 
+/* TODO
+fn inv_marked_paths_are_the_shortest_within_the_graph(testee: &JkmShortestPathMap) {
+	//Djikstra
+	let mut queue = std::collections::BinaryHeap::new();
+	MinSortableEdge ((,),)
+	queue.push(  )
+}*/
+
 #[test]
 fn simple_creation_test() {
 	let start = (100.0, 0.0);
@@ -310,6 +318,37 @@ fn nearest_checkpoint_test() {
 	let result = spm.nearest_checkpoint(50.0, 50.0);
 	assert!( result == Some((100.0,50.0)) || result == Some((50.0,100.0)) || dummy_logger(&spm, "nearest_checkpoint_log".to_string()),
 		"Result was: [{}|{}], Expected result:[{}|{}]", if let Some((x,_)) = result {x} else {-1.0}, if let Some((_,y)) = result {y} else {-1.0}, 50.0, 100.0);
+}
+
+// tests on empty map, depends also on JkmShortestPathMap::new(...)
+#[test]
+fn next_checkpoint_test() {
+	let start = (0.0, 100.0);
+	let end = (100.0, 100.0);
+	let map = (0.0,0.0,100.0,200.0);
+	let spm = JkmShortestPathMap::new(start, end, map);
+	
+	
+	let result = spm.next_checkpoint(0.0, 0.0);
+	assert!( result == Some((0.0, end.1)) || result == Some((end.0, 0.0)) || dummy_logger(&spm, "next_checkpoint_log".to_string()),
+		"Result was: [{}|{}], Expected result:[{}|{}]", if let Some((x,_)) = result {x} else {-1.0}, if let Some((_,y)) = result {y} else {-1.0}, 0.0, end.1);
+	
+	// Test cases from nearest_checkpoint should hold, too
+	let result = spm.next_checkpoint(10.0, 100.0);
+	assert!( result == Some(end) || dummy_logger(&spm, "next_checkpoint_log".to_string()),
+		"Result was: [{}|{}], Expected result:[{}|{}]", if let Some((x,_)) = result {x} else {-1.0}, if let Some((_,y)) = result {y} else {-1.0}, end.0, end.1);
+	let result = spm.next_checkpoint(0.0, 100.0);
+	assert!( result == Some(end) || dummy_logger(&spm, "next_checkpoint_log".to_string()),
+		"Result was: [{}|{}], Expected result:[{}|{}]", if let Some((x,_)) = result {x} else {-1.0}, if let Some((_,y)) = result {y} else {-1.0}, end.0, end.1);
+	let result = spm.next_checkpoint(0.0, 90.0);
+	assert!( result == Some(start) || result == Some((end.1,90.0)) || dummy_logger(&spm, "next_checkpoint_log".to_string()),
+		"Result was: [{}|{}], Expected result:[{}|{}]", if let Some((x,_)) = result {x} else {-1.0}, if let Some((_,y)) = result {y} else {-1.0}, start.0, start.1);
+	let result = spm.next_checkpoint(50.0, 50.0);
+	assert!( result == Some((100.0,50.0)) || result == Some((50.0,100.0)) || dummy_logger(&spm, "next_checkpoint_log".to_string()),
+		"Result was: [{}|{}], Expected result:[{}|{}]", if let Some((x,_)) = result {x} else {-1.0}, if let Some((_,y)) = result {y} else {-1.0}, 50.0, 100.0);
+	
+	
+	
 }
 
 // Tests wether merging is the opposite of splitting

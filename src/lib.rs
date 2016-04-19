@@ -614,7 +614,7 @@ impl JkmShortestPathMap {
 	pub fn next_checkpoint(&self, x: f64, y: f64) -> Option<(f64,f64)> {
 		let mut answer = None;
 		for node in self.graph.iter() {
-			if node.x - x < EPS && node.y - y < EPS {
+			if (node.x).abs() - x < EPS && (node.y - y).abs() < EPS {
 				if let Some(sp) = node.shortest_path {
 					if let Some(neighbour) = node.neighbours[sp] {
 						answer = Some( (self.graph[neighbour].x, self.graph[neighbour].y) );
