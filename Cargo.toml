@@ -1,5 +1,5 @@
 [package]
-name = "JKM Shortest Path Map Library"
+name = "jkm_shortest_path_map"
 version = "1.0.1"
 authors = ["Jakob Meier <jakobmeier@bluewin.ch>"]
 
