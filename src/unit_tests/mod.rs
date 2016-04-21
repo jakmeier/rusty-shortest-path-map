@@ -47,7 +47,7 @@ pub fn dummy_logger (testee: &JkmShortestPathMap, name: String ) -> bool {
 }
 
 pub fn log_map(testee: &JkmShortestPathMap, name: String ) {
-	if let Ok(mut f) = File::create(name + ".jkmmap") {
+	if let Ok(mut f) = File::create("log/".to_string() + &name + ".jkmmap") {
 		//nodes
 		for i in 0..testee.graph.len() {
 			let node_string = format!("{}|{}|{}|{}|{}|{}|{}|{}", 
@@ -73,6 +73,9 @@ pub fn log_map(testee: &JkmShortestPathMap, name: String ) {
 			}
 		}
 		
+	}
+	else {
+		panic!("Log file ./log/{}.jkmmap could no be created. Maybe the directory log is missing or the access was denied.", name );
 	}
 }
 

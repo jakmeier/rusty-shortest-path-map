@@ -208,7 +208,8 @@ impl JkmShortestPathMap {
 	/// Note that two obstacles that are exactly aligned will not block the way between them. There must be 
 	/// an overlapping to disable paths between obstacles.
 	pub fn insert_obstacle (&mut self, x: f64, y: f64, w: f64, h: f64) {
-		//<< add obstacle to list >> has been moved to the end of the function
+		//add obstacle to list
+		self.obstacles.push((x,y,w,h));
 		
 		// check map boundaries:
 		if x > self.map.0 + self.map.2 || y > self.map.1 + self.map.3 
@@ -322,18 +323,15 @@ impl JkmShortestPathMap {
 		let mut v_blocked_buf = Vec::new(); // use to buffer reversed ord
 		let mut h_blocked_buf = Vec::new(); 
 		
-		let mut predecessor : bool;
-		let mut no_nodes_on_line = true;
-		let mut corner_index : usize = 0; //only set for the compiler, in fact this will always be changed when it is read
+		let mut predecessor : Option<usize>; 
 		
 		//left upper corner
 		if !self.coordinate_is_blocked(lu.x, lu.y) {
 			self.graph.push(lu);
 			self.link_to_north(i);
 			self.link_to_west(i);
-			predecessor = true;
-			corner_index = i;
-		} else {predecessor = false;}
+			predecessor = Some(i);
+		} else {predecessor = None;}
 		
 		// upper line
 		for j in 0..v {
@@ -343,21 +341,31 @@ impl JkmShortestPathMap {
 				let cross_x:f64 = edge.1;
 				let mut new_node = Box::new(GraphNode::new(cross_x, y));
 				if !self.coordinate_is_blocked(new_node.x, new_node.y) {
-					no_nodes_on_line = false;
-					new_node.neighbours[NORTH] = Some(top); 
-					self.graph[top].neighbours[SOUTH] = Some(index);
-					if predecessor { 
-						let prev_index = if j == 0 { corner_index } else {index - 1};
-						if 	self.h_line_overlaps_no_obstacle ( self.graph[prev_index].x, self.graph[prev_index].y, new_node.x ) {
-							self.graph[prev_index].neighbours[EAST] = Some(index);
-							new_node.neighbours[WEST] = Some(prev_index);
+					if self.graph[top].y < y { 
+						/*if let Some(new_top) = self.graph[top].neighbours[NORTH] {
+							//self.graph[top].neighbours[NORTH] = None; //TODO
+							//self.graph[top].neighbours[SOUTH] = None; //TODO
+							top = new_top;
+						}*/			
+					
+						if self.graph[top].y < y {
+							new_node.neighbours[NORTH] = Some(top); 
+							self.graph[top].neighbours[SOUTH] = Some(index);
+						} 
+						
+						if let Some(prev_index) = predecessor{ 
+							if 	self.h_line_overlaps_no_obstacle ( self.graph[prev_index].x, self.graph[prev_index].y, new_node.x ) {
+								self.graph[prev_index].neighbours[EAST] = Some(index);
+								new_node.neighbours[WEST] = Some(prev_index);
+							}
 						}
+						self.graph.push(new_node);
+						if self.graph[top].y <= y {self.update_node(top);}
+						self.update_node(index);
+						predecessor = Some(index);
 					}
-					self.graph.push(new_node);
-					self.update_node(top);
-					self.update_node(index);
-					predecessor = true;
-				} else {predecessor = false;}
+					//else keep predecessor info
+				} else {predecessor = None;}
 				v_blocked_buf.push(edge);
 			}
 			else {panic!("Something in the graph went wrong. Number of vertices expected: {}, number found: {}\n", v, j);}
@@ -366,8 +374,7 @@ impl JkmShortestPathMap {
 		// right upper corner
 		let index = self.graph.len();
 		if !self.coordinate_is_blocked(ru.x, ru.y) {
-			if predecessor { 
-				let prev_index = if no_nodes_on_line { corner_index } else {index - 1};
+			if let Some(prev_index) = predecessor { 
 				if 	self.h_line_overlaps_no_obstacle ( self.graph[prev_index].x, self.graph[prev_index].y, ru.x ) {
 					ru.neighbours[WEST] = Some(prev_index); 
 					self.graph[prev_index].neighbours[EAST] = Some(index);
@@ -376,10 +383,8 @@ impl JkmShortestPathMap {
 			self.graph.push(ru);
 			self.link_to_north(index);
 			self.link_to_east(index);
-			predecessor = true;
-			corner_index = index;
-		} else {predecessor = false;}
-		no_nodes_on_line = true;
+			predecessor = Some(index);
+		} else {predecessor = None;}
 		
 		// right line	
 		for j in 0..ho {
@@ -389,22 +394,31 @@ impl JkmShortestPathMap {
 				let cross_y:f64 = edge.1;
 				let mut new_node = Box::new(GraphNode::new(x+w, cross_y));			
 				if !self.coordinate_is_blocked(new_node.x, new_node.y) {
-					no_nodes_on_line = false;
-					new_node.neighbours[EAST] = Some(right);
-					self.graph[right].neighbours[WEST] = Some(index );
-					if predecessor { 
-						let prev_index = if j == 0 { corner_index } else {index - 1};
-						if 	self.v_line_overlaps_no_obstacle ( self.graph[prev_index].x, self.graph[prev_index].y, new_node.y ) {
-							new_node.neighbours[NORTH] = Some(prev_index); 
-							self.graph[prev_index].neighbours[SOUTH] = Some(index);
+					/*if self.graph[right].x <= x + w {
+						if let Some(new_right) = self.graph[right].neighbours[EAST] {
+							//self.graph[right].neighbours[EAST] = None; //TODO
+							//self.graph[right].neighbours[WEST] = None; //TODO
+							right = new_right;
 						}
+					}*/
+					if self.graph[right].x > x + w {
+						new_node.neighbours[EAST] = Some(right);
+						self.graph[right].neighbours[WEST] = Some(index );
+					
+						if let Some(prev_index) = predecessor { 
+							if 	self.v_line_overlaps_no_obstacle ( self.graph[prev_index].x, self.graph[prev_index].y, new_node.y ) {
+								new_node.neighbours[NORTH] = Some(prev_index); 
+								self.graph[prev_index].neighbours[SOUTH] = Some(index);
+							}
+						}
+						
+						self.graph.push(new_node);
+						if self.graph[right].x >= x + w {self.update_node(right);}
+						self.update_node(index);
+						predecessor = Some(index);
 					}
-					h_blocked_buf.push(edge);
-					self.graph.push(new_node);
-					self.update_node(right);
-					self.update_node(index);
-					predecessor = true;
-				} else {predecessor = false;}
+				} else {predecessor = None;}
+				h_blocked_buf.push(edge);
 			}
 			else {panic!("Something in the graph went wrong. Number of vertices expected: {}, number found: {}\n", ho, j);}
 	
@@ -413,8 +427,7 @@ impl JkmShortestPathMap {
 		let index = self.graph.len();
 		
 		if !self.coordinate_is_blocked(rb.x, rb.y) {
-			if predecessor { 
-				let prev_index = if no_nodes_on_line { corner_index } else {index - 1};
+			if let Some(prev_index) = predecessor { 
 				if 	self.v_line_overlaps_no_obstacle ( self.graph[prev_index].x, self.graph[prev_index].y, rb.y ) {
 					rb.neighbours[NORTH] = Some(prev_index); 
 					self.graph[prev_index].neighbours[SOUTH] = Some(index);
@@ -423,10 +436,8 @@ impl JkmShortestPathMap {
 			self.graph.push(rb);
 			self.link_to_east(index);
 			self.link_to_south(index);
-			predecessor = true;
-			corner_index = index;
-		} else {predecessor = false;}
-		no_nodes_on_line = true;
+			predecessor = Some(index);
+		} else {predecessor = None;}
 		
 		// bottom line
 		
@@ -438,21 +449,29 @@ impl JkmShortestPathMap {
 				let cross_x:f64 = edge.1;
 				let mut new_node = Box::new(GraphNode::new(cross_x, y+h));		
 				if !self.coordinate_is_blocked(new_node.x, new_node.y) {
-					no_nodes_on_line = false;
-					new_node.neighbours[SOUTH] = Some(bot);
-					self.graph[bot].neighbours[NORTH] = Some(index);
-					if predecessor { 
-						let prev_index = if j == 0 { corner_index } else {index - 1};
-						if 	self.h_line_overlaps_no_obstacle ( new_node.x, self.graph[prev_index].y, self.graph[prev_index].x ) {
-							new_node.neighbours[EAST] = Some(prev_index);
-							self.graph[prev_index].neighbours[WEST] = Some(index);
+					/*if self.graph[bot].y <= y + h{ 
+						if let Some(new_bot) = self.graph[bot].neighbours[SOUTH] {
+							//self.graph[bot].neighbours[NORTH] = None; //TODO
+							//self.graph[bot].neighbours[SOUTH] = None; //TODO
+							bot = new_bot;
+						}				
+					}*/
+					if self.graph[bot].y > y + h {
+						new_node.neighbours[SOUTH] = Some(bot);
+						self.graph[bot].neighbours[NORTH] = Some(index);
+					
+						if let Some(prev_index) = predecessor { 
+							if 	self.h_line_overlaps_no_obstacle ( new_node.x, self.graph[prev_index].y, self.graph[prev_index].x ) {
+								new_node.neighbours[EAST] = Some(prev_index);
+								self.graph[prev_index].neighbours[WEST] = Some(index);
+							}
 						}
+						self.graph.push(new_node);
+						if self.graph[bot].y + h >= y {self.update_node(bot);}
+						self.update_node(index);
+						predecessor = Some(index);
 					}
-					self.graph.push(new_node);
-					self.update_node(bot);
-					self.update_node(index);
-					predecessor = true;
-				} else {predecessor = false;}
+				} else {predecessor = None;}
 			}
 			else {panic!("Something in the graph went wrong. Number of vertices expected: {}, number found: {}\n", v, j);}
 
@@ -461,8 +480,7 @@ impl JkmShortestPathMap {
 		let index = self.graph.len();
 		
 		if !self.coordinate_is_blocked(lb.x, lb.y) {
-			if predecessor { 
-				let prev_index = if no_nodes_on_line { corner_index } else {index - 1};
+			if let Some(prev_index) = predecessor { 
 				if 	self.h_line_overlaps_no_obstacle ( lb.x, self.graph[prev_index].y, self.graph[prev_index].x ) {
 					lb.neighbours[EAST] = Some(prev_index); 
 					self.graph[prev_index].neighbours[WEST] = Some(index);
@@ -471,10 +489,8 @@ impl JkmShortestPathMap {
 			self.graph.push(lb);
 			self.link_to_south(index);
 			self.link_to_west(index);
-			predecessor = true;
-			corner_index = index;
-		} else {predecessor = false;}
-		no_nodes_on_line = true;
+			predecessor = Some(index);
+		} else {predecessor = None;}
 		
 		// left line	
 		for j in 0..ho {
@@ -484,31 +500,40 @@ impl JkmShortestPathMap {
 				let cross_y:f64 = edge.1;
 				let mut new_node = Box::new(GraphNode::new(x, cross_y));	
 				if !self.coordinate_is_blocked(new_node.x, new_node.y) {
-					no_nodes_on_line = false;
-					new_node.neighbours[WEST] = Some(left);
-					self.graph[left].neighbours[EAST] = Some(index);
-					if predecessor { 
-						let prev_index = if j == 0 { corner_index } else {index - 1};
-						if 	self.v_line_overlaps_no_obstacle ( self.graph[prev_index].x, new_node.y, self.graph[prev_index].y ) {
-							new_node.neighbours[SOUTH] = Some(prev_index);
-							self.graph[prev_index].neighbours[NORTH] = Some(index);
+					/*if self.graph[left].x >= x {
+						if let Some(new_left) = self.graph[left].neighbours[WEST] {
+							//self.graph[left].neighbours[EAST] = None; //TODO
+							//self.graph[left].neighbours[WEST] = None; //TODO
+							left = new_left;
 						}
+					}*/
+					if self.graph[left].x < x {
+						new_node.neighbours[WEST] = Some(left);
+						self.graph[left].neighbours[EAST] = Some(index);
+					
+						if let Some(prev_index) = predecessor { 
+							if 	self.v_line_overlaps_no_obstacle ( self.graph[prev_index].x, new_node.y, self.graph[prev_index].y ) {
+								new_node.neighbours[SOUTH] = Some(prev_index);
+								self.graph[prev_index].neighbours[NORTH] = Some(index);
+							}
+						}
+						self.graph.push(new_node);
+						if self.graph[left].x < x {self.update_node(left);}
+						self.update_node(index);
+						predecessor = Some(index);
 					}
-					self.graph.push(new_node);
-					self.update_node(left);
-					self.update_node(index);
-					predecessor = true;
-				} else {predecessor = false;}
+				} else {predecessor = None;}
 			}
 			else {panic!("Something in the graph went wrong. Number of vertices expected: {},  found: {}\n", ho, j);}
 		}
 		
 		let index = self.graph.len();
-		if index > i && predecessor{
-			let prev_index = if no_nodes_on_line { corner_index } else {index - 1};
-			if 	self.v_line_overlaps_no_obstacle ( self.graph[i].x, self.graph[i].y, self.graph[prev_index].y ) {
-				self.graph[prev_index].neighbours[NORTH] = Some(i);
-				self.graph[i].neighbours[SOUTH] = Some(prev_index);			
+		if index > i {
+			if let Some(prev_index) = predecessor {
+				if self.v_line_overlaps_no_obstacle ( self.graph[i].x, self.graph[i].y, self.graph[prev_index].y ) {
+					self.graph[prev_index].neighbours[NORTH] = Some(i);
+					self.graph[i].neighbours[SOUTH] = Some(prev_index);			
+				}
 			}
 		}
 		
@@ -539,9 +564,7 @@ impl JkmShortestPathMap {
 		}//else: not connected at all => no update possible	
 		
 		// At this point, the graph should be consistent again
-		
-		//add obstacle to list
-		self.obstacles.push((x,y,w,h));
+	
 	}
 	
 	/// Makes the border of the map blocking, i.e. no paths can go through it

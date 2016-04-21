@@ -78,6 +78,39 @@ fn usual_use_case_two() {
 }
 
 #[test]
+fn no_path_available () {
+	let start = (0.0, 0.0);
+	let end = (0.0, 300.0);
+	let map = (-100.0, 0.0, 200.0, 300.0);
+	let  mut spm = JkmShortestPathMap::new(start, end, map);
+	
+	check_module_invariants(&spm);
+	
+	spm.add_map_border();
+	
+	check_module_invariants(&spm);
+	
+	let array_of_obstucles = [
+		(-110.0, 150.0, 70.0, 50.0),
+		(-60.0, 145.0, 70.0, 50.0),
+		(0.0, 150.0, 70.0, 50.0),
+		(50.0, 130.0, 70.0, 50.0),
+	];
+	
+	for &(x,y,w,h) in array_of_obstucles.iter() {
+		spm.insert_obstacle(x,y,w,h);
+		let filename = "no_path_log".to_string();
+		log_map(&spm, filename);
+		check_module_invariants(&spm);
+	}
+	
+	log_map(&spm, "no_path_log".to_string());
+	
+	assert!( !spm.graph[spm.start_point_index].shortest_path.is_some() || print_graph(&spm) );
+	assert!( spm.graph[spm.end_point_index].cost == 0.0 || print_graph(&spm) );
+}
+
+#[test]
 fn partial_overlapping_test() {
 	let start = (100.0, 0.0);
 	let end = (100.0, 300.0);
