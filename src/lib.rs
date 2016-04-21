@@ -602,7 +602,7 @@ impl JkmShortestPathMap {
 					let cost_to_edge = (y-new_y).abs();
 					if cost_on_edge + cost_to_edge < nearest.1 && cost_to_edge > EPS {
 						if (y < new_y && self.v_line_overlaps_no_obstacle(x, y, new_y ))
-							|| self.v_line_overlaps_no_obstacle(x, new_y, y ){
+							|| y > new_y && self.v_line_overlaps_no_obstacle(x, new_y, y ){
 							nearest = (Some((x,new_y)), cost_on_edge + cost_to_edge);
 						}		
 					} 	
@@ -618,7 +618,7 @@ impl JkmShortestPathMap {
 					let cost_to_edge = (x-new_x).abs();
 					if cost_on_edge + cost_to_edge < nearest.1  && cost_to_edge > EPS  {
 						if (x < new_x && self.h_line_overlaps_no_obstacle(x, y, new_x ))
-							|| self.h_line_overlaps_no_obstacle(new_x, y, x ){
+							|| x > new_x && self.h_line_overlaps_no_obstacle(new_x, y, x ){
 							nearest = (Some((new_x,y)), cost_on_edge + cost_to_edge);
 						}		
 					} 	
