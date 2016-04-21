@@ -7,6 +7,8 @@ To create a map, ther is a constructor *new()*, afterwards all obstacles can be 
 
 The map module is not aware of the size of the characters that will move through the map. The idea is to add the character size to the obstacle size, which should end up in the correct result. Unfortunately, this requires to have an instance of *JkmShortestPathMap* for each size of character that will move through the map. 
 
+To make use of the created log files see here: https://github.com/jakmeier/rusty-shortest-path-map-inspector
+
 Wish list:
  - Better and more test cases
  - Handle invalid inputs better
