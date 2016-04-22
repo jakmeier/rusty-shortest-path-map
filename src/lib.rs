@@ -589,21 +589,23 @@ impl JkmShortestPathMap {
 			return Some((x,y));
 		}
 		
-		let mut nearest = (None, std::f64::INFINITY);
+		let mut nearest = (None, std::f64::INFINITY, std::f64::INFINITY);
 		
 		for node in self.graph.iter() {
 			if let Some(right_index) = node.neighbours[EAST] {
 				let right = &self.graph[right_index];
 				if node.x <= x && right.x >= x {
 					let new_y = node.y;
-					let cost_on_edge = if (node.cost + x - node.x ) < (right.cost + right.x - x)
-										    {node.cost + x - node.x}
-									   else {right.cost + right.x - x};
+					let total_cost;
 					let cost_to_edge = (y-new_y).abs();
-					if cost_on_edge + cost_to_edge < nearest.1 && cost_to_edge > EPS {
+					let cost_on_edge = if (node.cost + x - node.x ) < (right.cost + right.x - x)
+										    {total_cost = node.cost + x - node.x + cost_to_edge; x - node.x}
+									   else {total_cost = right.cost + right.x - x + cost_to_edge; right.x - x};
+					
+					if total_cost <= nearest.1 && cost_on_edge + cost_to_edge > EPS && (total_cost < nearest.1 || cost_on_edge + cost_to_edge < nearest.2) {
 						if (y < new_y && self.v_line_overlaps_no_obstacle(x, y, new_y ))
-							|| y > new_y && self.v_line_overlaps_no_obstacle(x, new_y, y ){
-							nearest = (Some((x,new_y)), cost_on_edge + cost_to_edge);
+							||( y > new_y && self.v_line_overlaps_no_obstacle(x, new_y, y )){
+							nearest = (Some((x,new_y)), total_cost, cost_on_edge + cost_to_edge);
 						}		
 					} 	
 				}				
@@ -612,14 +614,15 @@ impl JkmShortestPathMap {
 				let bot = &self.graph[bot_index];
 				if node.y <= y && bot.y >= y {
 					let new_x = node.x;
-					let cost_on_edge = if (node.cost + y - node.y ) < (bot.cost + bot.y - y)
-										    {node.cost + y - node.y}
-									   else {bot.cost + bot.y - y};
+					let total_cost;
 					let cost_to_edge = (x-new_x).abs();
-					if cost_on_edge + cost_to_edge < nearest.1  && cost_to_edge > EPS  {
+					let cost_on_edge = if (node.cost + y - node.y ) < (bot.cost + bot.y - y)
+										    {total_cost = node.cost + y - node.y + cost_to_edge; y - node.y}
+									   else {total_cost = bot.cost + bot.y - y + cost_to_edge; bot.y - y};
+					if total_cost <= nearest.1  && cost_on_edge + cost_to_edge > EPS && (total_cost < nearest.1 || cost_on_edge + cost_to_edge < nearest.2) {
 						if (x < new_x && self.h_line_overlaps_no_obstacle(x, y, new_x ))
-							|| x > new_x && self.h_line_overlaps_no_obstacle(new_x, y, x ){
-							nearest = (Some((new_x,y)), cost_on_edge + cost_to_edge);
+							|| (x > new_x && self.h_line_overlaps_no_obstacle(new_x, y, x )){
+							nearest = (Some((new_x,y)), total_cost, cost_on_edge + cost_to_edge);
 						}		
 					} 	
 				}				
@@ -637,7 +640,7 @@ impl JkmShortestPathMap {
 	pub fn next_checkpoint(&self, x: f64, y: f64) -> Option<(f64,f64)> {
 		let mut answer = None;
 		for node in self.graph.iter() {
-			if (node.x).abs() - x < EPS && (node.y - y).abs() < EPS {
+			if (node.x - x).abs()  < EPS && (node.y - y).abs() < EPS {
 				if let Some(sp) = node.shortest_path {
 					if let Some(neighbour) = node.neighbours[sp] {
 						answer = Some( (self.graph[neighbour].x, self.graph[neighbour].y) );

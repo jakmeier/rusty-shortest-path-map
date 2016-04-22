@@ -78,6 +78,56 @@ fn usual_use_case_two() {
 }
 
 #[test]
+fn usual_use_case_three() {
+	let start = (0.0, 0.0);
+	let end = (0.0, 300.0);
+	let map = (-100.0, 0.0, 200.0, 300.0);
+	let  mut spm = JkmShortestPathMap::new(start, end, map);
+	
+	check_module_invariants(&spm);
+	
+	spm.add_map_border();
+	
+	check_module_invariants(&spm);
+	
+	let array_of_obstucles = [
+		(30.0, 20.0, 70.0, 70.0),
+		(-60.0, 100.0, 70.0, 70.0),
+		(-40.0, 150.0, 70.0, 70.0),
+		(10.0, 130.0, 70.0, 70.0),
+		(20.0, 220.0, 70.0, 70.0),
+	];
+	
+	for &(x,y,w,h) in array_of_obstucles.iter() {
+		spm.insert_obstacle(x,y,w,h);
+		log_map(&spm, "usual_use_case_three_log".to_string());
+		check_module_invariants(&spm);
+	}
+	
+	let array_of_coordinate_checkpoint_pairs = [
+		(end.0, end.1, None),
+		(0.0, 220.0, Some((0.0, 290.0))),
+		(10.0, 130.0, Some((30.0, 130.0))),
+		(15.0, 130.0, Some((30.0, 130.0))),
+		(45.0, 130.0, Some((80.0, 130.0))),
+	];
+	
+	for (i, &(x, y, checkpoint)) in array_of_coordinate_checkpoint_pairs.iter().enumerate() {
+		let result = spm.next_checkpoint(x,y);
+		let result2 = spm.nearest_checkpoint(x,y);
+		if let Some((new_x, new_y)) = checkpoint {
+			assert!(result.is_some(), "The call to next_checkpoint() should return some checkpoint. (i={})", i);
+			assert!(result2.is_some(), "The call to nearest_checkpoint() should return some checkpoint. (i={})", i);
+			let result = result.unwrap();
+			let result2 = result2.unwrap();
+			assert!(result.0 == result2.0 && result.1 == result2.1, "The results from nearest and next checkpoint should always be the same. Next: [{}|{}], Nearest:[{}|{}] (i={})",result.0, result.1, result2.0, result2.1, i );
+			assert!(result.0 == new_x && result.1 == new_y, "The resulting next checkpoint is not the expected. Got [{}|{}] but expected [{}|{}]. (i={})", result.0, result.1, new_x, new_y, i);
+		}
+	}
+	
+}
+
+#[test]
 fn no_path_available () {
 	let start = (0.0, 0.0);
 	let end = (0.0, 300.0);
