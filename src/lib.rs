@@ -7,7 +7,7 @@ pub mod unit_tests;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 
-const EPS: f64 = 1.0/4096.0;
+const EPS: f64 = 1.0/1048576.0;
 
 /// Stores a graph with the shortest path from each node to the destination.
 /// To recompute this, it also keeps in memory what obstucles there are, therefore, if the actual map changes this struct has to be notified.
@@ -360,8 +360,7 @@ impl JkmShortestPathMap {
 							}
 						}
 						self.graph.push(new_node);
-						if self.graph[top].y <= y {self.update_node(top);}
-						self.update_node(index);
+						self.update_neighbours(index);
 						predecessor = Some(index);
 					}
 					//else keep predecessor info
@@ -413,8 +412,7 @@ impl JkmShortestPathMap {
 						}
 						
 						self.graph.push(new_node);
-						if self.graph[right].x >= x + w {self.update_node(right);}
-						self.update_node(index);
+						self.update_neighbours(index);
 						predecessor = Some(index);
 					}
 				} else {predecessor = None;}
@@ -467,8 +465,7 @@ impl JkmShortestPathMap {
 							}
 						}
 						self.graph.push(new_node);
-						if self.graph[bot].y + h >= y {self.update_node(bot);}
-						self.update_node(index);
+						self.update_neighbours(index);
 						predecessor = Some(index);
 					}
 				} else {predecessor = None;}
@@ -518,8 +515,7 @@ impl JkmShortestPathMap {
 							}
 						}
 						self.graph.push(new_node);
-						if self.graph[left].x < x {self.update_node(left);}
-						self.update_node(index);
+						self.update_neighbours(index);
 						predecessor = Some(index);
 					}
 				} else {predecessor = None;}
@@ -638,9 +634,15 @@ impl JkmShortestPathMap {
 	/// Returns None if there is no path to the destination. 
 	///	If the destination is already reached, its coordinates are returned.
 	pub fn next_checkpoint(&self, x: f64, y: f64) -> Option<(f64,f64)> {
+	
+		let destination = self.end_point_index;
+		if self.graph[destination].x == x && self.graph[destination].y == y {
+			return Some((x,y));
+		}
+		
 		let mut answer = None;
 		for node in self.graph.iter() {
-			if (node.x - x).abs()  < EPS && (node.y - y).abs() < EPS {
+			if (node.x - x).abs() < EPS && (node.y - y).abs() < EPS {
 				if let Some(sp) = node.shortest_path {
 					if let Some(neighbour) = node.neighbours[sp] {
 						answer = Some( (self.graph[neighbour].x, self.graph[neighbour].y) );

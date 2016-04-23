@@ -125,7 +125,9 @@ fn inv_costs_are_correct(testee: &JkmShortestPathMap){
 		if let Some(sp) = testee.graph[i].shortest_path {
 			if let Some(neighbour) = testee.graph[i].neighbours[sp] {
 				let expected_cost = testee.graph[neighbour].cost + (testee.graph[i].x - testee.graph[neighbour].x).abs() + (testee.graph[i].y - testee.graph[neighbour].y).abs();
-				assert!( testee.graph[i].cost == expected_cost || print_graph(testee) );
+				assert!( testee.graph[i].cost == expected_cost || print_graph(testee), 
+				" The expected cost for node #{} was {} but it has the cost {}. ",
+				i, expected_cost, testee.graph[i].cost);
 			}
 		}
 	}
