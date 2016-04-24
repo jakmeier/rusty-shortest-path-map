@@ -634,25 +634,24 @@ impl JkmShortestPathMap {
 	/// Returns None if there is no path to the destination. 
 	///	If the destination is already reached, its coordinates are returned.
 	pub fn next_checkpoint(&self, x: f64, y: f64) -> Option<(f64,f64)> {
-	
+
 		let destination = self.end_point_index;
 		if self.graph[destination].x == x && self.graph[destination].y == y {
 			return Some((x,y));
 		}
 		
-		let mut answer = None;
 		for node in self.graph.iter() {
 			if (node.x - x).abs() < EPS && (node.y - y).abs() < EPS {
 				if let Some(sp) = node.shortest_path {
 					if let Some(neighbour) = node.neighbours[sp] {
-						answer = Some( (self.graph[neighbour].x, self.graph[neighbour].y) );
+						return Some( (self.graph[neighbour].x, self.graph[neighbour].y) );
 					}
 				}
 				break;
 			}
 		}
-		if answer.is_some() { answer }
-		else { self.nearest_checkpoint(x,y) }
+		println!("No current node found.");
+		self.nearest_checkpoint(x,y)
 	}
 	
 	// Checks recursivly on neighbours wether their shortest path goes through the given node.

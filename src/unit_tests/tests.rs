@@ -162,6 +162,8 @@ fn usual_use_case_four () {
 		(460.0, 121.2),
 		(283.7, 318.5),
 		(138.2, 312.3),
+		(0.0, 50.0),
+		(240.0, 100.0),
 	];
 	
 	let number_of_nodes = spm.graph.len();
@@ -170,20 +172,22 @@ fn usual_use_case_four () {
 		let mut i = 0;
 		let &(mut x, mut y) = start_point;
 		loop {
-			assert!( i < number_of_nodes, "There is a loop in the shortest path through the coordinate [{}|{}]. (testcase {}, i={})", x, y, t, i);
+			i += 1;
+			assert!( i <= number_of_nodes, "There is a loop in the shortest path through the coordinate [{}|{}]. (testcase {}, i={})", x, y, t, i);
 			if let Some (result) = spm.next_checkpoint(x,y) {
 				if let Some(result2) = spm.nearest_checkpoint(x,y) {
 					/*assert!(result.0 == result2.0 && result.1 == result2.1, 
 						"The results from nearest and next checkpoint should always be the same or at lest have the same cost. Next: [{}|{}], Nearest:[{}|{}], current position:[{}|{}] (testcase {}, i={})",
 						 result.0, result.1, result2.0, result2.1, x, y, t, i );*/	
+					let done = x == result.0 && y == result.1;
 					x = result.0;
 					y = result.1;
-					i += 1;
-					if !(x == result.0 && y == result.1) {continue; }
+					if !done {continue; }
 					
 				} else { panic!("nearest_checkpoint() returned None but next_checkpoint returned Some value. (testcase {}, i={})", t, i); }
-			}
+			} else { println!("No checkpoint returned."); }
 			//destination should be reached or there is no available path to the endpoint
+			// On this map there is always a path to the endpoint, therefore the end_point should really be reached
 			let destination = spm.end_point_index;
 			let expected_x = spm.graph[destination].x;
 			let expected_y = spm.graph[destination].y;
