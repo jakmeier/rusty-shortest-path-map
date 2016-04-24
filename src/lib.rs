@@ -19,6 +19,7 @@ pub struct JkmShortestPathMap {
 	end_point_index: usize,
 	map: (f64,f64,f64,f64),
 	dead_nodes: Vec<usize>,
+	update_root: Vec<usize>,
 }
 
 	// line: (x, y, x2)
@@ -87,6 +88,7 @@ impl JkmShortestPathMap {
 			start_point_index: 0, 
 			map: map, 
 			dead_nodes: Vec::new(),
+			update_root: Vec::new(), 
 		};
 	
 		if start.1 == map.1 && end.1 == map.1+map.3 && end.0 == start.0{
@@ -534,6 +536,7 @@ impl JkmShortestPathMap {
 		}
 		
 		self.cleanup();
+		self.update();
 		
 		// Search the node closest to the end point, then inititate recomputation starting from this node
 		let mut closest_node = (None, std::f64::INFINITY);
@@ -598,7 +601,10 @@ impl JkmShortestPathMap {
 										    {total_cost = node.cost + x - node.x + cost_to_edge; x - node.x}
 									   else {total_cost = right.cost + right.x - x + cost_to_edge; right.x - x};
 					
-					if total_cost <= nearest.1 && cost_on_edge + cost_to_edge > EPS && (total_cost < nearest.1 || cost_on_edge + cost_to_edge < nearest.2) {
+					if total_cost <= nearest.1 && cost_on_edge + cost_to_edge > EPS 
+						&& (total_cost < nearest.1 
+							|| (cost_on_edge + cost_to_edge < nearest.2 && total_cost < std::f64::INFINITY )
+						) {
 						if (y < new_y && self.v_line_overlaps_no_obstacle(x, y, new_y ))
 							||( y > new_y && self.v_line_overlaps_no_obstacle(x, new_y, y )){
 							nearest = (Some((x,new_y)), total_cost, cost_on_edge + cost_to_edge);
@@ -615,7 +621,10 @@ impl JkmShortestPathMap {
 					let cost_on_edge = if (node.cost + y - node.y ) < (bot.cost + bot.y - y)
 										    {total_cost = node.cost + y - node.y + cost_to_edge; y - node.y}
 									   else {total_cost = bot.cost + bot.y - y + cost_to_edge; bot.y - y};
-					if total_cost <= nearest.1  && cost_on_edge + cost_to_edge > EPS && (total_cost < nearest.1 || cost_on_edge + cost_to_edge < nearest.2) {
+					if total_cost <= nearest.1  && cost_on_edge + cost_to_edge > EPS 
+						&& (total_cost < nearest.1 
+							 || (cost_on_edge + cost_to_edge < nearest.2 && total_cost < std::f64::INFINITY  )
+							) {
 						if (x < new_x && self.h_line_overlaps_no_obstacle(x, y, new_x ))
 							|| (x > new_x && self.h_line_overlaps_no_obstacle(new_x, y, x )){
 							nearest = (Some((new_x,y)), total_cost, cost_on_edge + cost_to_edge);
@@ -650,7 +659,7 @@ impl JkmShortestPathMap {
 				break;
 			}
 		}
-		println!("No current node found.");
+		//println!("No current node found.");
 		self.nearest_checkpoint(x,y)
 	}
 	
@@ -661,14 +670,30 @@ impl JkmShortestPathMap {
 			if let Some(i) = self.graph[n].neighbours[direction] {
 				if let Some(sp_of_neighbour) = self.graph[i].shortest_path {
 					if self.graph[i].neighbours[sp_of_neighbour] == Some(n) {
-						
 						self.invalidate_paths_through_node (i);
+					}
+					else {
+						self.consider_node_as_update_root(i);
 					}
 				}
 			}
 		}
 		self.graph[n].shortest_path = None;
 		self.graph[n].cost = std::f64::INFINITY;
+	}
+	
+	fn consider_node_as_update_root(&mut self, n: usize) {
+		self.update_root.push(n);
+	}
+	
+	fn update(&mut self) {
+		for i in 0..self.update_root.len() {
+		let entry_point = self.update_root[i];
+			self.update_neighbours(entry_point);
+		}
+		self.update_root = Vec::new();
+		
+		
 	}
 	
 	// line: (x, y, x2)
