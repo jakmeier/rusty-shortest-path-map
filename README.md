@@ -1,5 +1,5 @@
 # Shortest Path Map - in pure rust
-A rust library to maintain all the shortest paths on a two dimensional map with rectangular obstacles that are inserted dynamically.
+A rust library to maintain all the shortest paths on a two dimensional map with rectangular obstacles that are inserted and removed dynamically.
 
 To get an overview of the functionalities and a short description of all public functions, use *cargo doc*.
 
