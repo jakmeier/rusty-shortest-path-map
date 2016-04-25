@@ -323,6 +323,86 @@ fn partial_overlapping_test() {
 	
 }
 
+#[test]
+fn delete_test_one() {
+	let start = (500.0, 0.0);
+	let end = (500.0, 1000.0);
+	let map = (0.0, 0.0, 1000.0, 1000.0);
+	let  mut spm = JkmShortestPathMap::new(start, end, map);
+	
+	spm.add_map_border();
+	spm.insert_obstacle(200.0, 300.0, 200.0, 100.0);
+	log_map(&spm, "delete_one_log".to_string());
+	spm.remove_obstacle(200.0, 300.0, 200.0, 100.0);
+	log_map(&spm, "delete_one_log".to_string());
+	check_module_invariants(&spm);
+	
+	spm.insert_obstacle(200.0, 300.0, 200.0, 100.0);
+	log_map(&spm, "delete_one_log".to_string());
+	spm.remove_obstacle(200.0, 300.0, 200.0, 100.0);
+	log_map(&spm, "delete_one_log".to_string());
+	check_module_invariants(&spm);
+	
+	let array_of_obstucles = [
+		(200.0, 300.0, 200.0, 100.0),
+		(300.0, 200.0, 400.0, 300.0),
+		(650.0, 210.0, 400.0, 280.0),
+		(-20.0, 220.0, 300.0, 260.0),
+	];
+	
+	for &(x,y,w,h) in array_of_obstucles.iter() {
+		spm.insert_obstacle(x,y,w,h);
+		log_map(&spm, "delete_one_log".to_string());
+		check_module_invariants(&spm);
+	}
+	
+	let (x,y,w,h) = array_of_obstucles[0];
+	spm.remove_obstacle(x,y,w,h);
+	log_map(&spm, "delete_one_log".to_string());
+	check_module_invariants(&spm);
+	
+	let test_cases = [
+		(start.0, start.1),
+		(707.0, 120.3),
+		(0.7, 3.5),
+		(205.2, 214.1),
+		(1000.0, 800.0),
+		(0.0, 480.0),
+	];
+	
+	let number_of_nodes = spm.graph.len();
+	
+	for (t, start_point) in test_cases.iter().enumerate() {
+		let mut i = 0;
+		let &(mut x, mut y) = start_point;
+		loop {
+			i += 1;
+			assert!( i <= number_of_nodes, "There is a loop in the shortest path through the coordinate [{}|{}]. (testcase {}, i={})", x, y, t, i);
+			if let Some (result) = spm.next_checkpoint(x,y) {
+				if let Some(result2) = spm.nearest_checkpoint(x,y) {
+					/*assert!(result.0 == result2.0 && result.1 == result2.1, 
+						"The results from nearest and next checkpoint should always be the same or at lest have the same cost. Next: [{}|{}], Nearest:[{}|{}], current position:[{}|{}] (testcase {}, i={})",
+						 result.0, result.1, result2.0, result2.1, x, y, t, i );*/	
+					let done = x == result.0 && y == result.1;
+					x = result.0;
+					y = result.1;
+					if !done {continue; }
+					
+				} else { panic!("nearest_checkpoint() returned None but next_checkpoint returned Some value. (testcase {}, i={})", t, i); }
+			} else { println!("No checkpoint returned."); }
+			//destination should be reached or there is no available path to the endpoint
+			// On this map there is always a path to the endpoint, therefore the end_point should really be reached
+			let destination = spm.end_point_index;
+			let expected_x = spm.graph[destination].x;
+			let expected_y = spm.graph[destination].y;
+			assert!( (x - expected_x).abs() < EPS && (y - expected_y).abs() < EPS, 
+				"The endpoint was not reached! Current position: [{}|{}], endpoint: [{}|{}], (testcase {}, i={})",
+				x, y, expected_x, expected_y, t, i);
+			break;
+		}
+	}
+}
+
 
 // TODO List
 	//	Invariant-styled:

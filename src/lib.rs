@@ -535,8 +535,10 @@ impl JkmShortestPathMap {
 			}
 		}
 		
+		
 		self.cleanup();
 		self.update();
+		self.erase_lonely_nodes();
 		
 		// Search the node closest to the end point, then inititate recomputation starting from this node
 		let mut closest_node = (None, std::f64::INFINITY);
@@ -564,6 +566,55 @@ impl JkmShortestPathMap {
 		
 		// At this point, the graph should be consistent again
 	
+		// This call is only here to shrink the graph size and get rid of unecessary nodes
+		// It is best called in the end because the recomputtation takes advantage of the fact that all 
+		//  new nodes have been appended to the end of the vector
+		// TODO: self.swap_out_dead_nodes();
+	}
+	
+	/// Removes an obstacle that was instered earlier. 
+	/// This function will do noting if there was no such obstacle inserted or if it was alread removed.
+	pub fn remove_obstacle (&mut self, x: f64, y: f64, w: f64, h: f64) {
+		let mut obstacle_index = None;
+		for (i, &(ox, oy, ow, oh)) in self.obstacles.iter().enumerate() {
+			if ox == x && oy == y && oh == h && ow == w {
+				obstacle_index = Some(i);
+				break;
+			}
+		}
+		if let Some(i) = obstacle_index {
+			self.obstacles.swap_remove(i);
+			for i in 0..self.graph.len() {
+				if self.graph[i].x > x && self.graph[i].x < x+w {
+					// upper line
+					if self.graph[i].y == y && !self.graph[i].neighbours[SOUTH].is_some() {
+						self.link_to_south(i);
+						self.update_node(i);
+						self.update_neighbours(i);
+					}
+					// lower line
+					if self.graph[i].y == y + h && !self.graph[i].neighbours[NORTH].is_some() {
+						self.link_to_north(i);
+						self.update_node(i);
+						self.update_neighbours(i);
+					}
+				}
+				if self.graph[i].y > y && self.graph[i].y < y+h {
+					// left line
+					if self.graph[i].x == x && !self.graph[i].neighbours[EAST].is_some() {
+						self.link_to_east(i);
+						self.update_node(i);
+						self.update_neighbours(i);
+					}
+					// right line
+					if self.graph[i].x == x + w && !self.graph[i].neighbours[WEST].is_some() {
+						self.link_to_west(i);
+						self.update_node(i);
+						self.update_neighbours(i);
+					}
+				}
+			}
+		}
 	}
 	
 	/// Makes the border of the map blocking, i.e. no paths can go through it
@@ -698,13 +749,6 @@ impl JkmShortestPathMap {
 	
 	// line: (x, y, x2)
 	// obstacle: (x, y, w, h)
-	
-	/*fn h_line_touches_no_obstacle (&self, x0: f64, y: f64, x1: f64) -> bool {
-		for &o in self.obstacles.iter() {
-			if h_line_touches_obstacle ( (x0,y,x1), o ) { return false; }
-		}
-		true
-	}*/
 	fn h_line_overlaps_no_obstacle (&self, x0: f64, y: f64, x1: f64) -> bool {
 		for &o in self.obstacles.iter() {
 			if h_line_overlaps_obstacle ( (x0,y,x1), o ) { return false; }
@@ -714,13 +758,6 @@ impl JkmShortestPathMap {
 	
 	// line: (x, y, y2)
 	// obstacle: (x, y, w, h)
-
-	/*fn v_line_touches_no_obstacle (&self, x: f64, y0: f64, y1: f64) -> bool {
-		for &o in self.obstacles.iter() {
-			if v_line_touches_obstacle ( (x,y0,y1), o ) { return false; }
-		}
-		true
-	}*/
 	fn v_line_overlaps_no_obstacle (&self, x: f64, y0: f64, y1: f64) -> bool {
 		for &o in self.obstacles.iter() {
 			if v_line_overlaps_obstacle ( (x,y0,y1), o ) { return false; }
@@ -857,7 +894,7 @@ impl JkmShortestPathMap {
 	
 	// panics if the node cannot be merged
 	// a node can be merged if it has exactly two neighbouts which are in the opposite direction
-	// Unless n is the last node in the graph, this funciton will produce unused nodes within the graph (no neighbours, coordinate -1.0|-1.0)
+	// Unless n is the last node in the graph, this funciton will produce unused nodes within the graph (no neighbours, coordinate std::f64::NEG_INFINITY|std::f64::NEG_INFINITY)
 	fn merge_node(&mut self, n: usize) {
 		if let Some(top) = self.graph[n].neighbours[NORTH] {
 			if let Some(bot) = self.graph[n].neighbours[SOUTH] {
@@ -880,14 +917,17 @@ impl JkmShortestPathMap {
 		}
 		// remove node
 		self.graph[n].neighbours = [None, None, None, None];
+		
 		self.erase_node(n);
 		self.cleanup();
 	}
 	
-	// Detatches the node from the graph and moves it to -1.0 | -1.0
+	// Detatches the node from the graph and moves it to -std::f64::NEG_INFINITY | std::f64::NEG_INFINITY
 	// The node can't be deleted since that would change the index of other nodes
 	// TODO: Make the node slots available for new nodes
 	fn erase_node (&mut self, n: usize) {
+		self.graph[n].x = std::f64::NEG_INFINITY;
+		self.graph[n].y = std::f64::NEG_INFINITY;
 		self.invalidate_paths_through_node(n);
 		for direction in 0..4 {
 			if let Some(neighbour) = self.graph[n].neighbours[direction] {
@@ -896,9 +936,59 @@ impl JkmShortestPathMap {
 				self.graph[neighbour].neighbours[other_direction] = None;
 			}
 		}
-		self.graph[n] = Box::new(GraphNode::new(-1.0, -1.0));
+		self.graph[n] = Box::new(GraphNode::new(std::f64::NEG_INFINITY, std::f64::NEG_INFINITY));
 		self.dead_nodes.push(n);
 	}
+	
+	// This procedure will mark nodes without neighbours as dead
+	fn erase_lonely_nodes (&mut self) {
+		for i in 0..self.graph.len() {
+			if !self.graph[i].neighbours[NORTH].is_some()
+				&& !self.graph[i].neighbours[EAST].is_some()
+				&& !self.graph[i].neighbours[SOUTH].is_some()
+				&& !self.graph[i].neighbours[WEST].is_some() 
+			{
+				self.graph[i].x = std::f64::NEG_INFINITY;
+				self.graph[i].y = std::f64::NEG_INFINITY;
+				self.dead_nodes.push(i);
+			}
+		}
+	}
+	
+	// Takes the last nodes in the graph and swaps them with the dead nodes so those can be erased
+	fn swap_out_dead_nodes (&mut self) {
+		while let Some(dead_slot) = self.dead_nodes.pop() {
+			debug_assert!(self.graph[dead_slot].x == std::f64::NEG_INFINITY && self.graph[dead_slot].y == std::f64::NEG_INFINITY , "Node #{} that was listed as dead was alive! It had the coordinates [{}|{}] ! ", dead_slot, self.graph[dead_slot].x, self.graph[dead_slot].y );
+			debug_assert!(self.graph[dead_slot].neighbours == [None, None, None, None], "Node #{} that was listed as dead was alive! It had some neighbours! ", dead_slot );
+			if dead_slot == self.graph.len() - 1 { self.graph.pop(); }
+			else {
+				if let Some(node) = self.graph.pop() {
+					for direction in 0..4 {
+						if let Some(neighbour) = node.neighbours[direction] {
+							debug_assert!(self.graph[neighbour].neighbours[ (direction + 2) %4 ] == Some(self.graph.len()));
+							self.graph[neighbour].neighbours[ (direction + 2) %4 ] = Some(dead_slot);
+						}
+					}
+					self.graph[dead_slot] = node;
+				}
+				else {
+					self.dead_nodes.push(dead_slot);
+					break;
+				}
+			}
+		}
+	}
+	
+	/*fn store_node (&mut self, node: GraphNode) -> usize {
+		if let Some(dead_index) = self.dead_nodes.pop() {
+			self.graph[dead_index] = node;
+			dead_index
+		}
+		else {
+			self.graph.push(node);
+			self.graph.len() - 1
+		}
+	}*/
 	
 	// These 4 functions take a node and search the next edge in one direction
 	// Then they connect to this edge which usually involves creating a new node
@@ -1039,6 +1129,13 @@ impl JkmShortestPathMap {
 	
 	// Looks through dead nodes and repairs wrongly set neighbourhoods
 	fn cleanup(&mut self) {
+		//before reconnecting anything, move all dead_nodes out of the way
+		/*for &dead_node in self.dead_nodes.iter() {
+			self.graph[dead_node].neighbours = [None, None, None, None];
+			self.graph[dead_node].x = std::f64::NEG_INFINITY;
+			self.graph[dead_node].y = std::f64::NEG_INFINITY;
+		}*/
+	
 		let mut to_remove = std::collections::BinaryHeap::new();
 		for i in 0..self.dead_nodes.len() {
 			let n = self.dead_nodes[i];
@@ -1061,16 +1158,13 @@ impl JkmShortestPathMap {
 				to_remove.push(i);
 			}
 		}
-		loop {		
-			if let Some(n) = to_remove.pop() {
-				// pop takes gratest item, therefore the indexed of the following nodes are not changed, 
-				// even if the implementation above changes
-				self.dead_nodes.swap_remove(n);
-			}
-			else { break; }
-			
+		while let Some(k) = to_remove.pop() {
+			// pop takes gratest item, therefore the indexed of the following nodes are not changed, 
+			// even if the implementation above changes
+			self.dead_nodes.swap_remove(k);
 		}
 	}
+	
 	
 	// These function search for a perfectly aligned neighbour node to connect, 
 	// they will ignore obstacles that are only touched on the border
