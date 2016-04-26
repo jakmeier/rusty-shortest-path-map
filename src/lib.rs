@@ -206,6 +206,11 @@ impl JkmShortestPathMap {
 		obj
 	}
 	
+	/// Reads out the coordinates of the end_point_index
+	pub fn get_destination_coordinates(&self) -> (f64, f64) {
+		(self.graph[self.end_point_index].x, self.graph[self.end_point_index].y)
+	}
+	
 	/// Adds a rectangular obstacle to the map and changes the graph's nodes and shortest paths accordingly. 
 	/// Note that two obstacles that are exactly aligned will not block the way between them. There must be 
 	/// an overlapping to disable paths between obstacles.
