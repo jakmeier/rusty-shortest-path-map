@@ -15,7 +15,7 @@ fn usual_use_case_one() {
 	check_module_invariants(&spm);
 	assert!(spm.graph.len() == 6 || print_graph(&spm));
 	
-	let array_of_obstucles = [
+	let array_of_obstacles = [
 		(80.0,20.0,40.0, 20.0),
 		(140.0, 40.0, 50.0, 110.0),
 		(50.0, 170.0, 20.0, 80.0),
@@ -24,7 +24,7 @@ fn usual_use_case_one() {
 		
 	];
 	
-	for (i, &(x,y,w,h)) in array_of_obstucles.iter().enumerate() {
+	for (i, &(x,y,w,h)) in array_of_obstacles.iter().enumerate() {
 		spm.insert_obstacle(x,y,w,h);
 		let filename = "usual_use_case_one_log".to_string() + &i.to_string();
 		log_map(&spm, filename);
@@ -55,7 +55,7 @@ fn usual_use_case_two() {
 	
 	check_module_invariants(&spm);
 	
-	let array_of_obstucles = [
+	let array_of_obstacles = [
 		(30.0, -1.0, 40.0, 301.0),
 		(100.0, 50.0, 50.0, 301.0),
 		(200.0, -1.0, 50.0, 51.0),
@@ -65,7 +65,7 @@ fn usual_use_case_two() {
 		(200.0, 199.0, 50.0, 51.0),
 	];
 	
-	for (i, &(x,y,w,h)) in array_of_obstucles.iter().enumerate() {
+	for (i, &(x,y,w,h)) in array_of_obstacles.iter().enumerate() {
 		spm.insert_obstacle(x,y,w,h);
 		//if i%2 == 0 {
 			let filename = "usual_use_case_two_log".to_string() + &i.to_string();
@@ -91,7 +91,7 @@ fn usual_use_case_three() {
 	
 	check_module_invariants(&spm);
 	
-	let array_of_obstucles = [
+	let array_of_obstacles = [
 		(30.0, 20.0, 70.0, 70.0),
 		(-60.0, 100.0, 70.0, 70.0),
 		(-40.0, 150.0, 70.0, 70.0),
@@ -99,7 +99,7 @@ fn usual_use_case_three() {
 		(20.0, 220.0, 70.0, 70.0),
 	];
 	
-	for &(x,y,w,h) in array_of_obstucles.iter() {
+	for &(x,y,w,h) in array_of_obstacles.iter() {
 		spm.insert_obstacle(x,y,w,h);
 		log_map(&spm, "usual_use_case_three_log".to_string());
 		check_module_invariants(&spm);
@@ -141,7 +141,7 @@ fn usual_use_case_four () {
 	
 	check_module_invariants(&spm);
 	
-	let array_of_obstucles = [
+	let array_of_obstacles = [
 		(20.0, 300.0, 70.0, 70.0),
 		(120.0, 320.0, 70.0, 70.0),
 		(150.0, 290.0, 70.0, 70.0),
@@ -151,7 +151,7 @@ fn usual_use_case_four () {
 		(400.0, 320.0, 70.0, 70.0),
 	];
 	
-	for &(x,y,w,h) in array_of_obstucles.iter() {
+	for &(x,y,w,h) in array_of_obstacles.iter() {
 		spm.insert_obstacle(x,y,w,h);
 		log_map(&spm, "usual_use_case_four_log".to_string());
 		check_module_invariants(&spm);
@@ -213,7 +213,7 @@ fn usual_use_case_five () {
 	
 	check_module_invariants(&spm);
 	
-	let array_of_obstucles = [
+	let array_of_obstacles = [
 		(50.0, 100.0, 110.0, 110.0),
 		(150.0, 120.0, 110.0, 110.0),
 		(250.0, 80.0, 110.0, 110.0),
@@ -224,7 +224,7 @@ fn usual_use_case_five () {
 		(400.0, 500.0, 110.0, 110.0),
 	];
 	
-	for &(x,y,w,h) in array_of_obstucles.iter() {
+	for &(x,y,w,h) in array_of_obstacles.iter() {
 		spm.insert_obstacle(x,y,w,h);
 		log_map(&spm, "usual_use_case_five_log".to_string());
 		check_module_invariants(&spm);
@@ -281,14 +281,14 @@ fn no_path_available () {
 	
 	check_module_invariants(&spm);
 	
-	let array_of_obstucles = [
+	let array_of_obstacles = [
 		(-110.0, 150.0, 70.0, 50.0),
 		(-60.0, 145.0, 70.0, 50.0),
 		(0.0, 150.0, 70.0, 50.0),
 		(50.0, 130.0, 70.0, 50.0),
 	];
 	
-	for &(x,y,w,h) in array_of_obstucles.iter() {
+	for &(x,y,w,h) in array_of_obstacles.iter() {
 		spm.insert_obstacle(x,y,w,h);
 		let filename = "no_path_log".to_string();
 		log_map(&spm, filename);
@@ -343,20 +343,20 @@ fn delete_test_one() {
 	log_map(&spm, "delete_one_log".to_string());
 	check_module_invariants(&spm);
 	
-	let array_of_obstucles = [
+	let array_of_obstacles = [
 		(200.0, 300.0, 200.0, 100.0),
 		(300.0, 200.0, 400.0, 300.0),
 		(650.0, 210.0, 400.0, 280.0),
 		(-20.0, 220.0, 300.0, 260.0),
 	];
 	
-	for &(x,y,w,h) in array_of_obstucles.iter() {
+	for &(x,y,w,h) in array_of_obstacles.iter() {
 		spm.insert_obstacle(x,y,w,h);
 		log_map(&spm, "delete_one_log".to_string());
 		check_module_invariants(&spm);
 	}
 	
-	let (x,y,w,h) = array_of_obstucles[0];
+	let (x,y,w,h) = array_of_obstacles[0];
 	spm.remove_obstacle(x,y,w,h);
 	log_map(&spm, "delete_one_log".to_string());
 	check_module_invariants(&spm);
