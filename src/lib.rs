@@ -18,7 +18,7 @@ pub struct JkmShortestPathMap {
 	start_point_index: usize,
 	end_point_index: usize,
 	map: (f64,f64,f64,f64),
-	dead_nodes: Vec<usize>,
+	dead_nodes: BinaryHeap<usize>,
 	update_root: Vec<usize>,
 }
 
@@ -87,7 +87,7 @@ impl JkmShortestPathMap {
 			end_point_index: 0,
 			start_point_index: 0, 
 			map: map, 
-			dead_nodes: Vec::new(),
+			dead_nodes: BinaryHeap::new(),
 			update_root: Vec::new(), 
 		};
 	
@@ -573,8 +573,8 @@ impl JkmShortestPathMap {
 	
 		// This call is only here to shrink the graph size and get rid of unecessary nodes
 		// It is best called in the end because the recomputtation takes advantage of the fact that all 
-		//  new nodes have been appended to the end of the vector
-		// TODO: self.swap_out_dead_nodes();
+		//  new nodes have been appended to the end of the vector. Calling this function may destroy that order.
+		self.swap_out_dead_nodes();
 	}
 	
 	/// Removes an obstacle that was instered earlier. 
@@ -744,7 +744,7 @@ impl JkmShortestPathMap {
 	
 	fn update(&mut self) {
 		for i in 0..self.update_root.len() {
-		let entry_point = self.update_root[i];
+			let entry_point = self.update_root[i];
 			self.update_neighbours(entry_point);
 		}
 		self.update_root = Vec::new();
@@ -927,7 +927,7 @@ impl JkmShortestPathMap {
 		self.cleanup();
 	}
 	
-	// Detatches the node from the graph and moves it to -std::f64::NEG_INFINITY | std::f64::NEG_INFINITY
+	// Detatches the node from the graph and moves it to std::f64::NEG_INFINITY | std::f64::NEG_INFINITY
 	// The node can't be deleted since that would change the index of other nodes
 	// TODO: Make the node slots available for new nodes
 	fn erase_node (&mut self, n: usize) {
@@ -962,10 +962,16 @@ impl JkmShortestPathMap {
 	
 	// Takes the last nodes in the graph and swaps them with the dead nodes so those can be erased
 	fn swap_out_dead_nodes (&mut self) {
+		let mut last = None;
 		while let Some(dead_slot) = self.dead_nodes.pop() {
+			// avoid deleting nodes more than once
+			if let Some(last_node) = last {
+				if last_node == dead_slot {continue;}
+			}
+			last = Some(dead_slot);
 			debug_assert!(self.graph[dead_slot].x == std::f64::NEG_INFINITY && self.graph[dead_slot].y == std::f64::NEG_INFINITY , "Node #{} that was listed as dead was alive! It had the coordinates [{}|{}] ! ", dead_slot, self.graph[dead_slot].x, self.graph[dead_slot].y );
 			debug_assert!(self.graph[dead_slot].neighbours == [None, None, None, None], "Node #{} that was listed as dead was alive! It had some neighbours! ", dead_slot );
-			if dead_slot == self.graph.len() - 1 { self.graph.pop(); }
+			if dead_slot == self.graph.len() - 1 { self.graph.pop(); }  // Note: since dead_nodes is a Max-Heap, this if condition is either true or the last node is alive
 			else {
 				if let Some(node) = self.graph.pop() {
 					for direction in 0..4 {
@@ -977,6 +983,7 @@ impl JkmShortestPathMap {
 					self.graph[dead_slot] = node;
 				}
 				else {
+					println!("Unexpected branch in the shortest path map module: No node in the graph, but there is something on the list of dead nodes."); 
 					self.dead_nodes.push(dead_slot);
 					break;
 				}
@@ -1134,16 +1141,9 @@ impl JkmShortestPathMap {
 	
 	// Looks through dead nodes and repairs wrongly set neighbourhoods
 	fn cleanup(&mut self) {
-		//before reconnecting anything, move all dead_nodes out of the way
-		/*for &dead_node in self.dead_nodes.iter() {
-			self.graph[dead_node].neighbours = [None, None, None, None];
-			self.graph[dead_node].x = std::f64::NEG_INFINITY;
-			self.graph[dead_node].y = std::f64::NEG_INFINITY;
-		}*/
-	
-		let mut to_remove = std::collections::BinaryHeap::new();
-		for i in 0..self.dead_nodes.len() {
-			let n = self.dead_nodes[i];
+		let to_consider = self.dead_nodes.clone();
+		for &n in to_consider.iter() {
+			debug_assert!(self.graph[n].x == std::f64::NEG_INFINITY && self.graph[n].y == std::f64::NEG_INFINITY, "Dead node had a coordinate");
 			for direction in 0..4 {
 				if let Some(neighbour) = self.graph[n].neighbours[direction] {
 					self.graph[n].neighbours[direction] = None;
@@ -1158,15 +1158,6 @@ impl JkmShortestPathMap {
 					self.graph[n].shortest_path = None;
 				}
 			}
-			if n == self.graph.len() - 1 { 
-				self.graph.pop(); 
-				to_remove.push(i);
-			}
-		}
-		while let Some(k) = to_remove.pop() {
-			// pop takes gratest item, therefore the indexed of the following nodes are not changed, 
-			// even if the implementation above changes
-			self.dead_nodes.swap_remove(k);
 		}
 	}
 	
